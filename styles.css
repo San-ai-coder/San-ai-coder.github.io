@@ -802,3 +802,81 @@ body.dark-mode .promedio-badge.badge-desaprobado {
   background: #1e293b;
   color: #fff;
 }
+
+/* ==========================================
+   ADAPTACIÓN EXCLUSIVA DEL POMODORO Y PANTALLA EN CELULARES
+   ========================================== */
+@media (max-width: 600px) {
+  .overlay-pomodoro {
+    height: 100dvh; /* Usa la altura dinámica del navegador móvil */
+    padding: 1.5rem 1rem;
+    overflow-y: auto;
+  }
+
+  .btn-cerrar-pomodoro {
+    top: 12px;
+    right: 16px;
+    font-size: 2.2rem;
+  }
+
+  .contenido-pomodoro-gigante {
+    width: 100%;
+    gap: 16px;
+  }
+
+  .frase-container-gigante h2 {
+    font-size: 1.25rem;
+  }
+
+  .frase-container-gigante p {
+    font-size: 0.9rem;
+  }
+
+  .reloj-gigante {
+    font-size: clamp(3.8rem, 18vw, 5.5rem);
+    letter-spacing: 0;
+    margin: 4px 0;
+  }
+
+  .pomo-opciones-tiempo {
+    gap: 10px;
+    font-size: 0.85rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .pomo-opciones-tiempo select {
+    font-size: 0.85rem;
+    padding: 6px 8px;
+    width: 100%;
+    max-width: 130px;
+  }
+
+  .pomo-controles-gigantes {
+    gap: 8px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-pomo-g {
+    flex: 1;
+    font-size: 0.9rem;
+    padding: 12px 6px;
+    border-radius: 10px;
+  }
+
+  .musica-compacta {
+    flex-direction: column;
+    width: 100%;
+    gap: 6px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+  }
+
+  .musica-compacta select {
+    width: 100%;
+    text-align: center;
+  }
+}
