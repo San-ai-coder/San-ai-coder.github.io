@@ -1,10 +1,10 @@
 /* ==========================================
-   SERVICE WORKER - PWA ACADÉMICA (DEFINITIVO)
+   SERVICE WORKER FINAL - APP ACADÉMICA (PWA)
    ========================================== */
 
 const NOMBRE_CACHE = 'app-academica-v1';
 
-// Archivos y librerías clave guardadas localmente
+// Recursos locales y CDNs a precargar
 const ARCHIVOS_CACHE = [
   './',
   './index.html',
@@ -13,31 +13,33 @@ const ARCHIVOS_CACHE = [
   './manifest.json',
   './hinata-shoyo.gif',
   './Get Lucky (feat. Pharrell Williams and Nile Rodgers).mp3',
-  'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.min.css',
+  'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css',
   'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js',
   'https://cdn.jsdelivr.net/npm/chart.js',
   'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
-// 1. Instalación e inoculación de caché
+// 1. INSTALACIÓN: Guarda los recursos iniciales en la memoria caché
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(NOMBRE_CACHE).then((cache) => {
-      console.log('[Service Worker] Almacenando recursos estáticos...');
-      return cache.addAll(ARCHIVOS_CACHE);
-    }).then(() => self.skipWaiting())
+    caches.open(NOMBRE_CACHE)
+      .then((cache) => {
+        console.log('[Service Worker] Precargando recursos para uso Offline...');
+        return cache.addAll(ARCHIVOS_CACHE);
+      })
+      .then(() => self.skipWaiting())
   );
 });
 
-// 2. Activación y limpieza de caché obsoleta
+// 2. ACTIVACIÓN: Limpia cachés obsoletas si cambias de versión
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== NOMBRE_CACHE) {
-            console.log('[Service Worker] Removiendo caché antigua:', key);
+            console.log('[Service Worker] Eliminando caché antigua:', key);
             return caches.delete(key);
           }
         })
@@ -46,13 +48,15 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. Estrategia Network First con respaldo Offline
+// 3. INTERCEPCIÓN DE PETICIONES (Estrategia: Red primero, fallback a Caché)
 self.addEventListener('fetch', (event) => {
+  // Solo procesar peticiones GET
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
     fetch(event.request)
       .then((respuestaRed) => {
+        // Si hay conexión, actualiza la caché dinámicamente
         const clonRespuesta = respuestaRed.clone();
         caches.open(NOMBRE_CACHE).then((cache) => {
           cache.put(event.request, clonRespuesta);
@@ -60,10 +64,12 @@ self.addEventListener('fetch', (event) => {
         return respuestaRed;
       })
       .catch(() => {
+        // Si no hay red, busca en la caché local
         return caches.match(event.request).then((respuestaCache) => {
           if (respuestaCache) {
             return respuestaCache;
           }
+          // Fallback para navegación de páginas si está completamente offline
           if (event.request.headers.get('accept')?.includes('text/html')) {
             return caches.match('./index.html');
           }
