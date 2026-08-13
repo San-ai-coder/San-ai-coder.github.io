@@ -1,0 +1,17 @@
+{
+  "short_name": "StudyHub",
+  "name": "StudyHub - Mi App de Estudio",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2231/2231627.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#1e293b",
+  "theme_color": "#3b82f6",
+  "display": "standalone",
+  "orientation": "portrait"
+}

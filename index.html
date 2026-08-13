@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>StudyHub</title>
+  
+  <!-- Configuración PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <header class="navbar">
+    <div class="logo">
+      <i class="fa-solid fa-graduation-cap"></i>
+      <span>StudyHub</span>
+    </div>
+    <button id="btn-darkmode" class="theme-toggle">
+      <i class="fa-solid fa-moon"></i>
+    </button>
+  </header>
+
+  <main class="container">
+
+    <!-- VISTA PRINCIPAL: MENÚ DE FICHEROS -->
+    <section id="menu-ficheros" class="modulo activo">
+      <div class="ficheros-header">
+        <h2>Panel de Control</h2>
+        <p>Selecciona un módulo para comenzar</p>
+      </div>
+      
+      <div class="grid-ficheros">
+        <div class="fichero-card card-hover" onclick="abrirModulo('cursos')">
+          <div class="fichero-icon"><i class="fa-solid fa-calculator"></i></div>
+          <h3>Cursos</h3>
+          <p>Gestión de notas y promedios</p>
+        </div>
+
+        <div class="fichero-card card-hover" onclick="abrirModulo('plan-estudio')">
+          <div class="fichero-icon"><i class="fa-solid fa-book-open"></i></div>
+          <h3>Plan de Estudio</h3>
+          <p>Progreso de temas y objetivos</p>
+        </div>
+
+        <div class="fichero-card card-hover" onclick="abrirModulo('horario')">
+          <div class="fichero-icon"><i class="fa-solid fa-clock"></i></div>
+          <h3>Horario</h3>
+          <p>Registro de clases y aulas</p>
+        </div>
+
+        <div class="fichero-card card-hover" onclick="abrirModulo('calendario')">
+          <div class="fichero-icon"><i class="fa-solid fa-calendar-days"></i></div>
+          <h3>Calendario</h3>
+          <p>Vista semanal y mensual de eventos</p>
+        </div>
+
+        <!-- Módulos de Enfoque que activa la ventana gigante -->
+        <div class="fichero-card card-hover" onclick="abrirPomodoroGigante()">
+          <div class="fichero-icon"><i class="fa-solid fa-stopwatch"></i></div>
+          <h3>Enfoque</h3>
+          <p>Temporizador Pomodoro y Lo-Fi</p>
+        </div>
+
+        <div class="fichero-card card-hover" onclick="abrirModulo('tareas')">
+          <div class="fichero-icon"><i class="fa-solid fa-list-check"></i></div>
+          <h3>Tareas</h3>
+          <p>Pendientes y entregas de exámenes</p>
+        </div>
+
+        <div class="fichero-card card-hover" onclick="abrirModulo('finanzas')">
+          <div class="fichero-icon"><i class="fa-solid fa-wallet"></i></div>
+          <h3>Finanzas</h3>
+          <p>Control de gastos e ingresos</p>
+        </div>
+
+        <div class="fichero-card card-hover" onclick="abrirModulo('recursos')">
+          <div class="fichero-icon"><i class="fa-solid fa-folder-open"></i></div>
+          <h3>Recursos</h3>
+          <p>Enlaces, libros y material útil</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- MÓDULO 1: CURSOS -->
+    <section id="cursos" class="modulo">
+      <button class="btn-volver btn-anim" onclick="volverAlMenu()">
+        <i class="fa-solid fa-arrow-left"></i> Volver al Menú
+      </button>
+
+      <h2><i class="fa-solid fa-calculator icon-hover"></i> Gestión de Cursos y Promedios</h2>
+      <div class="form-group" style="margin-top: 15px; max-width: 200px;">
+        <label for="cant-cursos">Cantidad de Cursos:</label>
+        <input type="number" id="cant-cursos" value="2" min="1" max="15" onchange="actualizarCantidadCursos()" />
+      </div>
+      <div id="contenedor-cursos" class="grid-cards"></div>
+    </section>
+
+    <!-- MÓDULO 2: PLAN DE ESTUDIO -->
+    <section id="plan-estudio" class="modulo">
+      <button class="btn-volver btn-anim" onclick="volverAlMenu()">
+        <i class="fa-solid fa-arrow-left"></i> Volver al Menú
+      </button>
+
+      <h2><i class="fa-solid fa-book-open icon-hover"></i> Plan de Estudio</h2>
+      <div class="grid-plan">
+        <div class="card">
+          <h3>Lista de Temas</h3>
+          <div id="lista-inputs-temas" style="margin-top: 15px;"></div>
+          <button class="btn-primary btn-anim" style="width: 100%; margin-top: 10px;" onclick="agregarTemaPlan()">+ Agregar Tema</button>
+        </div>
+        <div class="card">
+          <h3>Gráfico de Progreso</h3>
+          <div class="chart-container">
+            <canvas id="chartProgreso"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MÓDULO 3: HORARIO -->
+    <section id="horario" class="modulo">
+      <button class="btn-volver btn-anim" onclick="volverAlMenu()">
+        <i class="fa-solid fa-arrow-left"></i> Volver al Menú
+      </button>
+
+      <h2><i class="fa-solid fa-clock icon-hover"></i> Registro de Horario de Clases</h2>
+      <div class="grid-two-col">
+        <div class="card">
+          <h3>Añadir Clase</h3>
+          <form id="form-horario">
+            <div class="form-group">
+              <label>Curso:</label>
+              <input type="text" id="horario-curso" required placeholder="Nombre del curso" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Día:</label>
+                <select id="horario-dia">
+                  <option value="1">Lunes</option>
+                  <option value="2">Martes</option>
+                  <option value="3">Miércoles</option>
+                  <option value="4">Jueves</option>
+                  <option value="5">Viernes</option>
+                  <option value="6">Sábado</option>
+                  <option value="0">Domingo</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Aula / Link:</label>
+                <input type="text" id="horario-aula" placeholder="Ej: Lab 3 / Zoom" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Hora Inicio:</label>
+                <input type="time" id="horario-inicio" required />
+              </div>
+              <div class="form-group">
+                <label>Hora Fin:</label>
+                <input type="time" id="horario-fin" required />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Fecha Inicio Ciclo:</label>
+                <input type="date" id="horario-fecha-inicio" required />
+              </div>
+              <div class="form-group">
+                <label>Fecha Fin Ciclo:</label>
+                <input type="date" id="horario-fecha-fin" required />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Color de Etiqueta:</label>
+              <input type="hidden" id="horario-color" />
+              <div id="color-picker" class="color-picker-container"></div>
+            </div>
+            <button type="submit" class="btn-primary btn-anim" style="width: 100%; margin-top: 10px;">Guardar Clase</button>
+          </form>
+        </div>
+        <div class="card">
+          <h3>Mis Clases Registradas</h3>
+          <ul id="lista-horario" class="lista-custom"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- MÓDULO 4: CALENDARIO -->
+    <section id="calendario" class="modulo">
+      <button class="btn-volver btn-anim" onclick="volverAlMenu()">
+        <i class="fa-solid fa-arrow-left"></i> Volver al Menú
+      </button>
+
+      <h2><i class="fa-solid fa-calendar-days icon-hover"></i> Calendario Académico</h2>
+      <div class="card calendar-styled-card" style="margin-top: 15px;">
+        <div id="calendar"></div>
+      </div>
+    </section>
+
+    <!-- MÓDULO 5: ENFOQUE (VISTA INTERNA INTERACTIVA) -->
+    <section id="enfoque" class="modulo">
+      <button class="btn-volver btn-anim" onclick="volverAlMenu()">
+        <i class="fa-solid fa-arrow-left"></i> Volver al Menú
+      </button>
+
+      <h2><i class="fa-solid fa-stopwatch icon-hover"></i> Módulo de Enfoque</h2>
+      
+      <div class="grid-two-col">
+        <!-- TARJETA 1: TEMPORIZADOR POMODORO -->
+        <div class="card">
+          <h3>Temporizador Pomodoro</h3>
+          
+          <div class="form-row" style="margin-top: 10px;">
+            <div class="form-group">
+              <label>Trabajo (min):</label>
+              <select id="pomo-trabajo" onchange="seleccionarTiempoTrabajo(this.value)">
+                <option value="25" selected>25 min</option>
+                <option value="45">45 min</option>
+                <option value="60">60 min</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Descanso (min):</label>
+              <select id="pomo-descanso" onchange="seleccionarTiempoDescanso(this.value)">
+                <option value="5" selected>5 min</option>
+                <option value="10">10 min</option>
+                <option value="15">15 min</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="pomo-reloj" class="reloj-display">25:00</div>
+          
+          <div class="pomo-controles">
+            <button class="btn-pomo btn-start btn-anim" onclick="iniciarPomodoro()"><i class="fa-solid fa-play"></i> Iniciar</button>
+            <button class="btn-pomo btn-pause btn-anim" onclick="pausarPomodoro()"><i class="fa-solid fa-pause"></i> Pausa</button>
+            <button class="btn-pomo btn-reset btn-anim" onclick="reiniciarPomodoro()"><i class="fa-solid fa-rotate-right"></i> Reiniciar</button>
+          </div>
+        </div>
+
+        <!-- TARJETA 2: MÚSICA LOCAL -->
+        <div class="card">
+          <h3>Música Lo-Fi / Concentración</h3>
+          <div class="form-group" style="margin-top: 10px;">
+            <label for="select-musica-local">Seleccionar Canción:</label>
+            <select id="select-musica-local" onchange="cambiarMusicaLocal(this.value)">
+              <option value="">-- Sin música --</option>
+              <option value="snowfall.mp3">Snowfall</option>
+              <option value="green to blue - slowed + reverbed.mp3">green to Blue (slowed + reverbed)</option>
+              <option value="Get Lucky (feat. Pharrell Williams and Nile Rodgers).mp3">Get Lucky</option>
+              <option value="Something Just Like This.mp3">Something Just Like This</option>
+            </select>
+          </div>
+
+          <!-- Reproductor Nivel HTML5 -->
+          <div style="margin-top: 25px; text-align: center;">
+            <audio id="reproductor-audio" controls loop style="width: 100%;">
+            </audio>
+          </div>
+        </div>
+      </div>
+
+      <!-- FRASE MOTIVACIONAL -->
+      <div class="card quote-section-bottom" style="margin-top: 20px;">
+        <h3>Frase de Motivación</h3>
+        <div id="quote-interactive-box" class="quote-interactive-box" onclick="generarNuevaFrase()">
+          <p id="quote-texto">"Cargando frase..."</p>
+          <small id="quote-pelicula">— Autor</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- MÓDULO 6: TAREAS -->
+    <section id="tareas" class="modulo">
+      <button class="btn-volver btn-anim" onclick="volverAlMenu()">
+        <i class="fa-solid fa-arrow-left"></i> Volver al Menú
+      </button>
+
+      <h2><i class="fa-solid fa-list-check icon-hover"></i> Gestión de Tareas</h2>
+      <div class="grid-two-col">
+        <div class="card">
+          <h3>Añadir Tarea</h3>
+          <form id="form-tarea">
+            <div class="form-group">
+              <label>Título:</label>
+              <input type="text" id="tarea-titulo" required placeholder="Ej: Trabajo práctico 1" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Tipo:</label>
+                <select id="tarea-tipo">
+                  <option value="Tarea">Tarea</option>
+                  <option value="Examen">Examen</option>
+                  <option value="Proyecto">Proyecto</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Fecha Límite:</label>
+                <input type="date" id="tarea-fecha" required />
+              </div>
+            </div>
+            <button type="submit" class="btn-primary btn-anim" style="width: 100%; margin-top: 10px;">Guardar Tarea</button>
+          </form>
+        </div>
+        <div class="card">
+          <h3>Lista de Pendientes</h3>
+          <ul id="lista-tareas" class="lista-custom"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- MÓDULO 7: FINANZAS -->
+    <section id="finanzas" class="modulo">
+      <button class="btn-volver btn-anim" onclick="volverAlMenu()">
+        <i class="fa-solid fa-arrow-left"></i> Volver al Menú
+      </button>
+
+      <h2><i class="fa-solid fa-wallet icon-hover"></i> Control de Finanzas</h2>
+      <div class="grid-two-col">
+        <div class="card">
+          <h3>Registrar Movimiento</h3>
+          <form id="form-finanzas">
+            <div class="form-group">
+              <label>Concepto:</label>
+              <input type="text" id="fin-concepto" required placeholder="Ej. Impresiones, Libros" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Monto (S/):</label>
+                <input type="number" id="fin-monto" step="0.01" required placeholder="0.00" />
+              </div>
+              <div class="form-group">
+                <label>Tipo:</label>
+                <select id="fin-tipo">
+                  <option value="gasto">Gasto (-)</option>
+                  <option value="ahorro">Ingreso/Ahorro (+)</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn-primary btn-anim" style="width: 100%; margin-top: 10px;">Registrar</button>
+          </form>
+        </div>
+        <div class="card">
+          <h3>Historial y Balance</h3>
+          <p style="font-weight: 700; margin-bottom: 10px;">Balance Total: <span id="total-balance" style="color: var(--primary-color);">S/ 0.00</span></p>
+          <ul id="lista-finanzas" class="lista-custom"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- MÓDULO 8: RECURSOS -->
+    <section id="recursos" class="modulo">
+      <button class="btn-volver btn-anim" onclick="volverAlMenu()">
+        <i class="fa-solid fa-arrow-left"></i> Volver al Menú
+      </button>
+
+      <h2><i class="fa-solid fa-folder-open icon-hover"></i> Recursos y Enlaces</h2>
+      <div class="grid-two-col">
+        <div class="card">
+          <h3>Guardar Enlace</h3>
+          <form id="form-recurso">
+            <div class="form-group">
+              <label>Curso:</label>
+              <input type="text" id="rec-curso" placeholder="Ej: Matemática, Historia..." required />
+            </div>
+            <div class="form-group">
+              <label>Título del Recurso:</label>
+              <input type="text" id="rec-titulo" required placeholder="Ej: Drive del curso" />
+            </div>
+            <div class="form-group">
+              <label>Enlace / URL:</label>
+              <input type="url" id="rec-url" required placeholder="https://..." />
+            </div>
+            <button type="submit" class="btn-primary btn-anim" style="width: 100%; margin-top: 10px;">Añadir Recurso</button>
+          </form>
+        </div>
+        <div class="card">
+          <h3>Recursos Guardados</h3>
+          <ul id="lista-recursos" class="lista-custom"></ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- VENTANA GIGANTE DE POMODORO INMERSIVO -->
+  <div id="modal-pomodoro-gigante" class="overlay-pomodoro">
+    <!-- Botón de Cierre (X) en la esquina superior -->
+    <button class="btn-cerrar-pomodoro" onclick="cerrarPomodoroGigante()">&times;</button>
+    
+    <div class="contenido-pomodoro-gigante">
+      <!-- Frase Motivacional Grande -->
+      <div class="frase-container-gigante" onclick="generarNuevaFraseGigante()" style="cursor: pointer;">
+        <h2 id="pomo-frase-texto">"Cargando frase motivacional..."</h2>
+        <p id="pomo-frase-autor">— Autor</p>
+      </div>
+
+      <!-- Reloj Enorme -->
+      <div id="pomo-reloj-gigante" class="reloj-gigante">25:00</div>
+
+      <!-- Tiempos de Selección -->
+      <div class="pomo-opciones-tiempo">
+        <div>
+          <label>Trabajo: </label>
+          <select id="pomo-trabajo-g" onchange="seleccionarTiempoTrabajo(this.value)">
+            <option value="25" selected>25 min</option>
+            <option value="45">45 min</option>
+            <option value="50">50 min</option>
+            <option value="60">60 min</option>
+          </select>
+        </div>
+        <div>
+          <label>Descanso: </label>
+          <select id="pomo-descanso-g" onchange="seleccionarTiempoDescanso(this.value)">
+            <option value="5" selected>5 min</option>
+            <option value="10">10 min</option>
+            <option value="15">15 min</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Botones Principales Gigantes -->
+      <div class="pomo-controles-gigantes">
+        <button class="btn-pomo-g btn-iniciar" onclick="iniciarPomodoro()">
+          <i class="fa-solid fa-play"></i> Iniciar
+        </button>
+        <button class="btn-pomo-g btn-pausar" onclick="pausarPomodoro()">
+          <i class="fa-solid fa-pause"></i> Pausa
+        </button>
+        <button class="btn-pomo-g btn-reiniciar" onclick="reiniciarPomodoro()">
+          <i class="fa-solid fa-rotate-right"></i> Reiniciar
+        </button>
+      </div>
+
+      <!-- Cancioncita Compacta / Reproductor -->
+      <div class="musica-compacta">
+        <label for="select-musica-gigante"><i class="fa-solid fa-music"></i> Música ambiental:</label>
+        <select id="select-musica-gigante" onchange="cambiarMusicaLocal(this.value)">
+          <option value="">-- Sin música --</option>
+          <option value="snowfall.mp3">Snowfall</option>
+          <option value="green to blue - slowed + reverbed.mp3">green to Blue</option>
+          <option value="Get Lucky (feat. Pharrell Williams and Nile Rodgers).mp3">Get Lucky</option>
+          <option value="Something Just Like This.mp3">Something Just Like This</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CELEBRACIÓN -->
+  <div id="celebration-overlay" class="celebration-modal">
+    <div class="card celebration-content">
+      <img id="celebration-gif" src="hinata-shoyo.gif" alt="Hinata Shoyo Celebración" class="celebration-gif" />
+      <h3 id="celebration-curso-nombre">¡Felicidades por aprobar!</h3>
+      <p style="margin-top: 8px;">¡Excelente trabajo en este curso!</p>
+      <button class="btn-primary btn-anim" style="margin-top: 15px;" onclick="cerrarCelebracion()">¡Genial!</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="script.js"></script>
+
+  <!-- Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker registrado correctamente', reg))
+          .catch(err => console.error('Error registrando Service Worker', err));
+      });
+    }
+  </script>
+</body>
+</html>
