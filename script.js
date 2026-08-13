@@ -29,7 +29,7 @@ let editandoHorarioIndex = null;
 
 let miGraficoProgreso = null;
 let calendarInstance = null;
-let tooltipEl = null; // Elemento para el cuadro flotante / tooltip
+let tooltipEl = null;
 
 const listaColoresDisponibles = [
   { id: "c1", hex: "#3b82f6" },
@@ -417,12 +417,12 @@ function renderizarCursos() {
           const promU = calcularPromedioUnidad(unidad);
           return `
             <div style="background: var(--secondary-bg, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; padding: 8px 10px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">
-                <input type="text" value="${unidad.nombre}" style="font-weight: 600; border: none; background: transparent;" onchange="actualizarNombreUnidad(${cIndex}, ${uIndex}, this.value)">
+              <div style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between; align-items: center; font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; width: 100%;">
+                <input type="text" value="${unidad.nombre}" style="font-weight: 600; border: none; background: transparent; flex: 1 1 auto !important; min-width: 0 !important; width: auto !important;" onchange="actualizarNombreUnidad(${cIndex}, ${uIndex}, this.value)">
                 
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  ${curso.tipoCalculo === 'ponderado' ? `<input type="number" placeholder="%" value="${unidad.peso}" style="width: 55px; text-align: center;" onchange="actualizarPesoUnidad(${cIndex}, ${uIndex}, this.value)">` : ''}
-                  <span style="color: var(--primary-color, #2563eb);">Prom: ${promU.toFixed(2)}</span>
+                <div style="display: flex !important; align-items: center; gap: 6px; flex: 0 0 auto !important;">
+                  ${curso.tipoCalculo === 'ponderado' ? `<input type="number" placeholder="%" value="${unidad.peso}" style="width: 48px !important; text-align: center;" onchange="actualizarPesoUnidad(${cIndex}, ${uIndex}, this.value)">` : ''}
+                  <span style="color: var(--primary-color, #2563eb); font-size: 0.8rem; white-space: nowrap;">Prom: ${promU.toFixed(2)}</span>
                   <button class="btn-delete-eval btn-anim" title="Eliminar Unidad" onclick="eliminarUnidad(${cIndex}, ${uIndex})">
                     <i class="fa-solid fa-trash-can"></i>
                   </button>
@@ -431,18 +431,18 @@ function renderizarCursos() {
 
               <div class="evaluaciones-list">
                 ${unidad.evaluaciones.map((ev, eIndex) => `
-                  <div class="eval-row" style="display: flex; gap: 6px; margin-bottom: 4px; align-items: center;">
-                    <input type="text" placeholder="Eval" value="${ev.nombre}" onchange="actualizarEvalNombre(${cIndex}, ${uIndex}, ${eIndex}, this.value)" style="flex: 1; min-width: 0;">
-                    <input type="number" placeholder="Peso" value="${ev.peso}" onchange="actualizarEvalPeso(${cIndex}, ${uIndex}, ${eIndex}, this.value)" style="width: 68px; text-align: center; padding: 4px 2px;">
-                    <input type="number" placeholder="Nota" min="0" max="20" step="0.1" value="${ev.nota}" onchange="actualizarEvalNota(${cIndex}, ${uIndex}, ${eIndex}, this.value)" style="width: 68px; text-align: center; padding: 4px 2px;">
-                    <button class="btn-delete-eval btn-anim" onclick="eliminarEvaluacion(${cIndex}, ${uIndex}, ${eIndex})">
+                  <div class="eval-row" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 4px !important; margin-bottom: 6px; align-items: center; width: 100%;">
+                    <input type="text" placeholder="Eval" value="${ev.nombre}" onchange="actualizarEvalNombre(${cIndex}, ${uIndex}, ${eIndex}, this.value)" style="flex: 1 1 auto !important; min-width: 0 !important; width: auto !important; font-size: 0.8rem; padding: 5px 6px;">
+                    <input type="number" placeholder="%" value="${ev.peso}" onchange="actualizarEvalPeso(${cIndex}, ${uIndex}, ${eIndex}, this.value)" style="width: 52px !important; flex: 0 0 52px !important; text-align: center; font-size: 0.8rem; padding: 5px 2px;">
+                    <input type="number" placeholder="Nota" min="0" max="20" step="0.1" value="${ev.nota}" onchange="actualizarEvalNota(${cIndex}, ${uIndex}, ${eIndex}, this.value)" style="width: 52px !important; flex: 0 0 52px !important; text-align: center; font-size: 0.8rem; padding: 5px 2px;">
+                    <button class="btn-delete-eval btn-anim" onclick="eliminarEvaluacion(${cIndex}, ${uIndex}, ${eIndex})" style="flex: 0 0 auto !important; padding: 5px 8px; margin: 0;">
                       <i class="fa-solid fa-xmark"></i>
                     </button>
                   </div>
                 `).join('')}
               </div>
 
-              <button class="btn-secondary btn-anim" style="font-size: 0.72rem; width: 100%; margin-top: 4px; padding: 3px;" onclick="agregarEvaluacion(${cIndex}, ${uIndex})">
+              <button class="btn-secondary btn-anim" style="font-size: 0.72rem; width: 100%; margin-top: 4px; padding: 4px;" onclick="agregarEvaluacion(${cIndex}, ${uIndex})">
                 + Eval en ${unidad.nombre}
               </button>
             </div>
@@ -527,7 +527,7 @@ function actualizarCantidadCursos() {
 }
 
 /* ==========================================
-   TOOLTIP / CUADRO INFORMATIVO FLOTANTE (ADAPTADO A MÓVILES)
+   TOOLTIP / CUADRO INFORMATIVO FLOTANTE
    ========================================== */
 function crearTooltip() {
   if (!tooltipEl) {
@@ -547,7 +547,6 @@ function crearTooltip() {
     tooltipEl.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
     document.body.appendChild(tooltipEl);
 
-    // Cierra el cuadro si se pulsa fuera de la tarjeta o del evento
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.fc-event') && !e.target.closest('#calendar-custom-tooltip')) {
         ocultarTooltip();
@@ -571,7 +570,6 @@ function mostrarTooltip(info) {
   const esMovil = window.innerWidth <= 640;
 
   if (esMovil) {
-    // Estilo fijo inferior responsivo para pantalla táctil
     tooltipEl.style.left = '50%';
     tooltipEl.style.bottom = '20px';
     tooltipEl.style.top = 'auto';
@@ -579,7 +577,6 @@ function mostrarTooltip(info) {
     tooltipEl.style.width = '90%';
     tooltipEl.style.maxWidth = '360px';
   } else {
-    // Posicionamiento dinámico cerca del cursor/evento en PC
     const rect = info.el.getBoundingClientRect();
     tooltipEl.style.transform = 'none';
     tooltipEl.style.width = 'auto';
@@ -624,7 +621,6 @@ function inicializarCalendario24h() {
     headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,dayGridMonth' },
     buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana' },
     
-    // Hover para escritorio
     eventMouseEnter: function(info) {
       if (window.innerWidth > 640) {
         mostrarTooltip(info);
@@ -636,7 +632,6 @@ function inicializarCalendario24h() {
       }
     },
     
-    // Tap / Clic para Celulares
     eventClick: function(info) {
       info.jsEvent.stopPropagation();
       mostrarTooltip(info);
@@ -678,14 +673,12 @@ function reconstruirEventosCalendario() {
   if (!calendarInstance) return;
   calendarInstance.removeAllEvents();
 
-  // 1. Cargar Clases Recurrentes
   horarioClases.forEach(h => {
     if (h.fInicio && h.fFin && h.diaIndex !== undefined) {
       agregarClaseRecurrenteAlCalendario(h.curso, h.diaIndex, h.inicio, h.fin, h.fInicio, h.fFin, h.aula, h.color);
     }
   });
 
-  // 2. Cargar Tareas en el Calendario
   tareas.forEach(t => {
     if (t.fecha) {
       calendarInstance.addEvent({
