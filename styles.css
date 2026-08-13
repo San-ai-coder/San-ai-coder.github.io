@@ -808,75 +808,92 @@ body.dark-mode .promedio-badge.badge-desaprobado {
    ========================================== */
 @media (max-width: 600px) {
   .overlay-pomodoro {
-    height: 100dvh; /* Usa la altura dinámica del navegador móvil */
-    padding: 1.5rem 1rem;
+    height: 100dvh;
+    padding: 1rem 0.75rem;
     overflow-y: auto;
+    box-sizing: border-box;
   }
 
+  /* 1. Posición corregida para la X (no choca con el texto) */
   .btn-cerrar-pomodoro {
-    top: 12px;
-    right: 16px;
-    font-size: 2.2rem;
+    top: 10px;
+    right: 15px;
+    font-size: 2rem;
+    z-index: 10;
   }
 
   .contenido-pomodoro-gigante {
     width: 100%;
-    gap: 16px;
+    max-width: 100%;
+    gap: 12px;
+    padding-top: 25px; /* Espacio extra para que no pise la X */
   }
 
+  /* 2. Ajuste de frase */
   .frase-container-gigante h2 {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
+    line-height: 1.3;
+    padding: 0 10px;
   }
 
   .frase-container-gigante p {
-    font-size: 0.9rem;
-  }
-
-  .reloj-gigante {
-    font-size: clamp(3.8rem, 18vw, 5.5rem);
-    letter-spacing: 0;
-    margin: 4px 0;
-  }
-
-  .pomo-opciones-tiempo {
-    gap: 10px;
     font-size: 0.85rem;
-    flex-wrap: wrap;
-    justify-content: center;
+  }
+
+  /* 3. Reloj responsive que JAMÁS se corta */
+  .reloj-gigante {
+    font-size: clamp(2.8rem, 14vw, 4.2rem);
+    letter-spacing: -1px;
+    margin: 5px 0;
     width: 100%;
+  }
+
+  /* 4. Selectores de tiempo alineados */
+  .pomo-opciones-tiempo {
+    gap: 8px;
+    font-size: 0.8rem;
+    width: 100%;
+    justify-content: center;
   }
 
   .pomo-opciones-tiempo select {
-    font-size: 0.85rem;
-    padding: 6px 8px;
+    font-size: 0.8rem;
+    padding: 6px;
     width: 100%;
-    max-width: 130px;
+    max-width: 110px;
   }
 
+  /* 5. Botones que entran perfecto sin cortar texto */
   .pomo-controles-gigantes {
-    gap: 8px;
+    gap: 6px;
     width: 100%;
-    justify-content: center;
+    justify-content: space-between;
   }
 
   .btn-pomo-g {
     flex: 1;
-    font-size: 0.9rem;
-    padding: 12px 6px;
-    border-radius: 10px;
+    font-size: 0.8rem;
+    padding: 10px 4px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    white-space: nowrap; /* Evita saltos raros de texto */
   }
 
+  /* 6. Reproductor de música compacto */
   .musica-compacta {
-    flex-direction: column;
+    flex-direction: row;
     width: 100%;
     gap: 6px;
-    padding: 10px 14px;
-    border-radius: 12px;
-    font-size: 0.85rem;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    justify-content: center;
   }
 
   .musica-compacta select {
-    width: 100%;
-    text-align: center;
+    width: auto;
+    font-size: 0.8rem;
   }
 }
