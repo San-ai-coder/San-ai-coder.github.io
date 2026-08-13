@@ -2,7 +2,8 @@
    SERVICE WORKER FINAL - APP ACADÉMICA (PWA)
    ========================================== */
 
-const NOMBRE_CACHE = 'app-academica-v1';
+// Se incrementa la versión para forzar la actualización en celulares
+const NOMBRE_CACHE = 'app-academica-v2';
 
 // Recursos locales y CDNs a precargar
 const ARCHIVOS_CACHE = [
@@ -25,21 +26,21 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(NOMBRE_CACHE)
       .then((cache) => {
-        console.log('[Service Worker] Precargando recursos para uso Offline...');
+        console.log('[Service Worker] Precargando recursos actualizados...');
         return cache.addAll(ARCHIVOS_CACHE);
       })
       .then(() => self.skipWaiting())
   );
 });
 
-// 2. ACTIVACIÓN: Limpia cachés obsoletas si cambias de versión
+// 2. ACTIVACIÓN: Borra automáticamente las versiones antiguas (v1, etc.)
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== NOMBRE_CACHE) {
-            console.log('[Service Worker] Eliminando caché antigua:', key);
+            console.log('[Service Worker] Eliminando caché obsoleta:', key);
             return caches.delete(key);
           }
         })
@@ -48,7 +49,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. INTERCEPCIÓN DE PETICIONES (Estrategia: Red primero, fallback a Caché)
+// 3. INTERCEPCIÓN DE PETICIONES (Network-First con fallback a Caché)
 self.addEventListener('fetch', (event) => {
   // Solo procesar peticiones GET
   if (event.request.method !== 'GET') return;
@@ -56,7 +57,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((respuestaRed) => {
-        // Si hay conexión, actualiza la caché dinámicamente
+        // Si hay red, actualiza la caché dinámicamente con los nuevos estilos/scripts
         const clonRespuesta = respuestaRed.clone();
         caches.open(NOMBRE_CACHE).then((cache) => {
           cache.put(event.request, clonRespuesta);
@@ -64,12 +65,12 @@ self.addEventListener('fetch', (event) => {
         return respuestaRed;
       })
       .catch(() => {
-        // Si no hay red, busca en la caché local
+        // Si no hay conexión, sirve desde la caché
         return caches.match(event.request).then((respuestaCache) => {
           if (respuestaCache) {
             return respuestaCache;
           }
-          // Fallback para navegación de páginas si está completamente offline
+          // Fallback para la navegación si se solicita un HTML offline
           if (event.request.headers.get('accept')?.includes('text/html')) {
             return caches.match('./index.html');
           }
