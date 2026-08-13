@@ -25,9 +25,11 @@ let tareas = [];
 let finanzas = [];
 let recursos = [];
 let horarioClases = [];
+let editandoHorarioIndex = null;
 
 let miGraficoProgreso = null;
 let calendarInstance = null;
+let tooltipEl = null; // Elemento para el cuadro flotante / tooltip
 
 const listaColoresDisponibles = [
   { id: "c1", hex: "#3b82f6" },
@@ -41,6 +43,85 @@ const listaColoresDisponibles = [
 
 let coloresUsados = new Set();
 const audioAprobado = new Audio("Get Lucky (feat. Pharrell Williams and Nile Rodgers).mp3");
+
+/* ==========================================
+   SISTEMA DE GUARDADO LOCAL Y RESPALDO
+   ========================================== */
+function guardarDatos() {
+  const estadoApp = {
+    cursosData,
+    temasPlan,
+    tareas,
+    finanzas,
+    recursos,
+    horarioClases
+  };
+  localStorage.setItem('appAcademicaState', JSON.stringify(estadoApp));
+}
+
+function cargarDatos() {
+  const guardado = localStorage.getItem('appAcademicaState');
+  if (guardado) {
+    try {
+      const data = JSON.parse(guardado);
+      if (data.cursosData) cursosData = data.cursosData;
+      if (data.temasPlan) temasPlan = data.temasPlan;
+      if (data.tareas) tareas = data.tareas;
+      if (data.finanzas) finanzas = data.finanzas;
+      if (data.recursos) recursos = data.recursos;
+      if (data.horarioClases) horarioClases = data.horarioClases;
+    } catch (e) {
+      console.error("Error al cargar los datos guardados", e);
+    }
+  }
+}
+
+function exportarDatos() {
+  guardarDatos();
+  const estadoApp = localStorage.getItem('appAcademicaState');
+  if (!estadoApp) return alert("No hay datos guardados para exportar.");
+  
+  const blob = new Blob([estadoApp], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "mi_informacion_academica.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importarDatos(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.cursosData) cursosData = data.cursosData;
+      if (data.temasPlan) temasPlan = data.temasPlan;
+      if (data.tareas) tareas = data.tareas;
+      if (data.finanzas) finanzas = data.finanzas;
+      if (data.recursos) recursos = data.recursos;
+      if (data.horarioClases) horarioClases = data.horarioClases;
+
+      guardarDatos();
+      
+      renderizarCursos();
+      renderHorario();
+      renderTareas();
+      renderFinanzas();
+      renderRecursos();
+      renderTemasPlan();
+      reconstruirEventosCalendario();
+
+      alert("¡Tus datos se cargaron correctamente en este dispositivo!");
+    } catch (err) {
+      alert("El archivo seleccionado no es válido.");
+    }
+  };
+  reader.readAsText(file);
+}
 
 /* ==========================================
    FRASES DE MOTIVACIÓN Y ROTACIÓN AUTOMÁTICA
@@ -73,14 +154,12 @@ function generarNuevaFrase() {
   const frase = frasesPeliculas[idxFrase];
   const color = paletaColoresFrase[idxColor];
 
-  // Actualiza frase del módulo normal
   if (elemTexto && elemAutor) {
     elemTexto.textContent = frase.texto;
     elemTexto.style.color = color;
     elemAutor.textContent = frase.pelicula;
   }
 
-  // Actualiza frase del Pomodoro Gigante
   if (pomoTexto && pomoAutor) {
     pomoTexto.textContent = frase.texto;
     pomoTexto.style.color = color;
@@ -88,7 +167,6 @@ function generarNuevaFrase() {
   }
 }
 
-// Iniciar cambio automático de frases cada 12 segundos
 function iniciarRotacionFrases() {
   generarNuevaFrase();
   if (!intervaloFrases) {
@@ -97,14 +175,19 @@ function iniciarRotacionFrases() {
 }
 
 /* ==========================================
-   INICIALIZACIÓN
+   INICIALIZACIÓN DE LA APLICACIÓN
    ========================================== */
 document.addEventListener("DOMContentLoaded", () => {
+  cargarDatos();
   inicializarCalendario24h();
   renderizarCursos();
   configurarEventosFormularios();
   renderColorPicker();
   renderTemasPlan();
+  renderHorario();
+  renderTareas();
+  renderFinanzas();
+  renderRecursos();
   inicializarGraficoProgreso();
   iniciarRotacionFrases();
 });
@@ -137,7 +220,7 @@ function volverAlMenu() {
 }
 
 /* ==========================================
-   POMODORO, MÚSICA Y VENTANA GIGANTE
+   POMODORO Y MÚSICA
    ========================================== */
 let pomoInterval = null;
 let pomoTiempo = 25 * 60;
@@ -155,13 +238,11 @@ function actualizarPantallaPomodoro() {
   if (displayGigante) displayGigante.innerText = tiempoTexto;
 }
 
-// Selección de tiempo de TRABAJO
 function seleccionarTiempoTrabajo(minutos) {
   esModoDescanso = false;
   pausarPomodoro();
   pomoTiempo = parseInt(minutos) * 60;
   
-  // Sincronizar selectores del menú normal y gigante
   const selNormal = document.getElementById('pomo-trabajo');
   const selGigante = document.getElementById('pomo-trabajo-g');
   if (selNormal) selNormal.value = minutos;
@@ -170,13 +251,11 @@ function seleccionarTiempoTrabajo(minutos) {
   actualizarPantallaPomodoro();
 }
 
-// Selección de tiempo de DESCANSO (Corregido)
 function seleccionarTiempoDescanso(minutos) {
   esModoDescanso = true;
   pausarPomodoro();
   pomoTiempo = parseInt(minutos) * 60;
 
-  // Sincronizar selectores del menú normal y gigante
   const selNormal = document.getElementById('pomo-descanso');
   const selGigante = document.getElementById('pomo-descanso-g');
   if (selNormal) selNormal.value = minutos;
@@ -317,7 +396,7 @@ function renderizarCursos() {
 
   cursosData.forEach((curso, cIndex) => {
     const promedioFinal = calcularPromedioFinalCurso(curso);
-    const estaAprobado = promedioFinal >= 10.5;
+    const estaAprobado = promedioFinal >= 13.5;
     const card = document.createElement('div');
     card.className = 'card card-hover';
 
@@ -342,7 +421,7 @@ function renderizarCursos() {
                 <input type="text" value="${unidad.nombre}" style="font-weight: 600; border: none; background: transparent;" onchange="actualizarNombreUnidad(${cIndex}, ${uIndex}, this.value)">
                 
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  ${curso.tipoCalculo === 'ponderado' ? `<input type="number" placeholder="%" value="${unidad.peso}" style="width: 45px;" onchange="actualizarPesoUnidad(${cIndex}, ${uIndex}, this.value)">` : ''}
+                  ${curso.tipoCalculo === 'ponderado' ? `<input type="number" placeholder="%" value="${unidad.peso}" style="width: 55px; text-align: center;" onchange="actualizarPesoUnidad(${cIndex}, ${uIndex}, this.value)">` : ''}
                   <span style="color: var(--primary-color, #2563eb);">Prom: ${promU.toFixed(2)}</span>
                   <button class="btn-delete-eval btn-anim" title="Eliminar Unidad" onclick="eliminarUnidad(${cIndex}, ${uIndex})">
                     <i class="fa-solid fa-trash-can"></i>
@@ -352,10 +431,10 @@ function renderizarCursos() {
 
               <div class="evaluaciones-list">
                 ${unidad.evaluaciones.map((ev, eIndex) => `
-                  <div class="eval-row" style="display: flex; gap: 4px; margin-bottom: 4px;">
-                    <input type="text" placeholder="Eval" value="${ev.nombre}" onchange="actualizarEvalNombre(${cIndex}, ${uIndex}, ${eIndex}, this.value)">
-                    <input type="number" placeholder="Peso" value="${ev.peso}" onchange="actualizarEvalPeso(${cIndex}, ${uIndex}, ${eIndex}, this.value)" style="width: 55px;">
-                    <input type="number" placeholder="Nota" min="0" max="20" step="0.1" value="${ev.nota}" onchange="actualizarEvalNota(${cIndex}, ${uIndex}, ${eIndex}, this.value)" style="width: 55px;">
+                  <div class="eval-row" style="display: flex; gap: 6px; margin-bottom: 4px; align-items: center;">
+                    <input type="text" placeholder="Eval" value="${ev.nombre}" onchange="actualizarEvalNombre(${cIndex}, ${uIndex}, ${eIndex}, this.value)" style="flex: 1; min-width: 0;">
+                    <input type="number" placeholder="Peso" value="${ev.peso}" onchange="actualizarEvalPeso(${cIndex}, ${uIndex}, ${eIndex}, this.value)" style="width: 68px; text-align: center; padding: 4px 2px;">
+                    <input type="number" placeholder="Nota" min="0" max="20" step="0.1" value="${ev.nota}" onchange="actualizarEvalNota(${cIndex}, ${uIndex}, ${eIndex}, this.value)" style="width: 68px; text-align: center; padding: 4px 2px;">
                     <button class="btn-delete-eval btn-anim" onclick="eliminarEvaluacion(${cIndex}, ${uIndex}, ${eIndex})">
                       <i class="fa-solid fa-xmark"></i>
                     </button>
@@ -382,11 +461,11 @@ function renderizarCursos() {
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: rgba(0,0,0,0.02); padding: 8px; border-radius: 6px; margin-bottom: 10px;">
         <div>
           <label style="font-size: 0.75rem; display: block; font-weight: 600;">Sustitutorio:</label>
-          <input type="number" placeholder="Nota" min="0" max="20" step="0.1" value="${curso.sustitutorio}" onchange="actualizarSustitutorio(${cIndex}, this.value)" style="width: 100%; padding: 4px; font-size: 0.82rem;">
+          <input type="number" placeholder="Nota" min="0" max="20" step="0.1" value="${curso.sustitutorio}" onchange="actualizarSustitutorio(${cIndex}, this.value)" style="width: 100%; padding: 4px; font-size: 0.82rem; text-align: center;">
         </div>
         <div>
           <label style="font-size: 0.75rem; display: block; font-weight: 600;">Aplazado:</label>
-          <input type="number" placeholder="Nota" min="0" max="20" step="0.1" value="${curso.aplazado}" onchange="actualizarAplazado(${cIndex}, this.value)" style="width: 100%; padding: 4px; font-size: 0.82rem;">
+          <input type="number" placeholder="Nota" min="0" max="20" step="0.1" value="${curso.aplazado}" onchange="actualizarAplazado(${cIndex}, this.value)" style="width: 100%; padding: 4px; font-size: 0.82rem; text-align: center;">
         </div>
       </div>
 
@@ -398,15 +477,16 @@ function renderizarCursos() {
 
     contenedor.appendChild(card);
   });
+  guardarDatos();
 }
 
 function cambiarTipoCalculo(cIdx, val) { cursosData[cIdx].tipoCalculo = val; renderizarCursos(); }
-function actualizarNombreCurso(cIdx, val) { cursosData[cIdx].nombre = val; }
-function actualizarNombreUnidad(cIdx, uIdx, val) { cursosData[cIdx].unidades[uIdx].nombre = val; }
+function actualizarNombreCurso(cIdx, val) { cursosData[cIdx].nombre = val; guardarDatos(); }
+function actualizarNombreUnidad(cIdx, uIdx, val) { cursosData[cIdx].unidades[uIdx].nombre = val; guardarDatos(); }
 function actualizarPesoUnidad(cIdx, uIdx, val) { cursosData[cIdx].unidades[uIdx].peso = parseFloat(val) || 0; renderizarCursos(); }
 function actualizarSustitutorio(cIdx, val) { cursosData[cIdx].sustitutorio = val; renderizarCursos(); }
 function actualizarAplazado(cIdx, val) { cursosData[cIdx].aplazado = val; renderizarCursos(); }
-function actualizarEvalNombre(cIdx, uIdx, eIdx, val) { cursosData[cIdx].unidades[uIdx].evaluaciones[eIdx].nombre = val; }
+function actualizarEvalNombre(cIdx, uIdx, eIdx, val) { cursosData[cIdx].unidades[uIdx].evaluaciones[eIdx].nombre = val; guardarDatos(); }
 function actualizarEvalPeso(cIdx, uIdx, eIdx, val) { cursosData[cIdx].unidades[uIdx].evaluaciones[eIdx].peso = parseFloat(val) || 0; renderizarCursos(); }
 function actualizarEvalNota(cIdx, uIdx, eIdx, val) { cursosData[cIdx].unidades[uIdx].evaluaciones[eIdx].nota = parseFloat(val) || 0; renderizarCursos(); }
 
@@ -447,7 +527,52 @@ function actualizarCantidadCursos() {
 }
 
 /* ==========================================
-   CALENDARIO Y OTROS MÓDULOS
+   TOOLTIP / CUADRO INFORMATIVO FLOTANTE
+   ========================================== */
+function crearTooltip() {
+  if (!tooltipEl) {
+    tooltipEl = document.createElement('div');
+    tooltipEl.id = 'calendar-custom-tooltip';
+    tooltipEl.style.position = 'fixed';
+    tooltipEl.style.zIndex = '99999';
+    tooltipEl.style.background = '#0f172a';
+    tooltipEl.style.color = '#ffffff';
+    tooltipEl.style.padding = '8px 12px';
+    tooltipEl.style.borderRadius = '8px';
+    tooltipEl.style.fontSize = '0.82rem';
+    tooltipEl.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
+    tooltipEl.style.pointerEvents = 'none';
+    tooltipEl.style.display = 'none';
+    tooltipEl.style.maxWidth = '250px';
+    tooltipEl.style.lineHeight = '1.4';
+    tooltipEl.style.border = '1px solid #334155';
+    document.body.appendChild(tooltipEl);
+  }
+}
+
+function mostrarTooltip(info) {
+  crearTooltip();
+  const desc = info.event.extendedProps.descripcion || '';
+  
+  tooltipEl.innerHTML = `
+    <div style="font-weight: 700; color: #60a5fa; margin-bottom: 2px;">${info.event.title}</div>
+    <div style="color: #cbd5e1; font-size: 0.78rem;">${desc}</div>
+  `;
+
+  const rect = info.el.getBoundingClientRect();
+  tooltipEl.style.left = `${rect.left + (rect.width / 2) - 100}px`;
+  tooltipEl.style.top = `${rect.top - 55}px`;
+  tooltipEl.style.display = 'block';
+}
+
+function ocultarTooltip() {
+  if (tooltipEl) {
+    tooltipEl.style.display = 'none';
+  }
+}
+
+/* ==========================================
+   CALENDARIO Y HORARIO DE CLASES (CON TAREAS)
    ========================================== */
 function inicializarCalendario24h() {
   const calendarEl = document.getElementById('calendar');
@@ -462,11 +587,19 @@ function inicializarCalendario24h() {
     slotMaxTime: '24:00:00',
     slotDuration: '01:00:00',
     slotLabelFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
+    eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
     headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,dayGridMonth' },
     buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana' },
+    eventMouseEnter: function(info) {
+      mostrarTooltip(info);
+    },
+    eventMouseLeave: function() {
+      ocultarTooltip();
+    },
     events: []
   });
   calendarInstance.render();
+  reconstruirEventosCalendario();
 }
 
 function agregarClaseRecurrenteAlCalendario(titulo, diaSemanaTarget, horaInicio, horaFin, fechaInicioStr, fechaFinStr, aula, colorClase) {
@@ -486,13 +619,114 @@ function agregarClaseRecurrenteAlCalendario(titulo, diaSemanaTarget, horaInicio,
         title: `${titulo} (${aula})`,
         start: `${year}-${month}-${day}T${horaInicio}:00`,
         end: `${year}-${month}-${day}T${horaFin}:00`,
-        color: colorClase || '#1e40af'
+        color: colorClase || '#1e40af',
+        extendedProps: {
+          descripcion: `📚 Curso: ${titulo}<br>📍 Aula: ${aula}<br>⏰ Horario: ${horaInicio} a ${horaFin}`
+        }
       });
     }
     actual.setDate(actual.getDate() + 1);
   }
 }
 
+function reconstruirEventosCalendario() {
+  if (!calendarInstance) return;
+  calendarInstance.removeAllEvents();
+
+  // 1. Cargar Clases Recurrentes
+  horarioClases.forEach(h => {
+    if (h.fInicio && h.fFin && h.diaIndex !== undefined) {
+      agregarClaseRecurrenteAlCalendario(h.curso, h.diaIndex, h.inicio, h.fin, h.fInicio, h.fFin, h.aula, h.color);
+    }
+  });
+
+  // 2. Cargar Tareas en el Calendario
+  tareas.forEach(t => {
+    if (t.fecha) {
+      calendarInstance.addEvent({
+        title: `📌 ${t.titulo}`,
+        start: t.fecha,
+        allDay: true,
+        color: '#f59e0b',
+        extendedProps: {
+          descripcion: `📝 Tipo: ${t.tipo}<br>📅 Fecha Límite: ${t.fecha}`
+        }
+      });
+    }
+  });
+}
+
+function renderHorario() {
+  const ul = document.getElementById('lista-horario');
+  if (!ul) return;
+  
+  ul.innerHTML = horarioClases.map((h, i) => `
+    <li style="border-left: 5px solid ${h.color}; position: relative; margin-bottom: 8px; padding: 8px; background: rgba(0,0,0,0.02); border-radius: 6px;">
+      <strong>${h.curso}</strong> - ${h.dia} (${h.inicio} a ${h.fin})<br>
+      <small style="color: #64748b;">Aula: ${h.aula}</small>
+      <div style="margin-top: 6px; display: flex; gap: 6px;">
+        <button class="btn-secondary btn-anim" style="font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; cursor: pointer;" onclick="editarHorario(${i})">
+          <i class="fa-solid fa-pen"></i> Modificar
+        </button>
+        <button class="btn-delete-eval btn-anim" style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; cursor: pointer;" onclick="eliminarHorario(${i})">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </li>
+  `).join('');
+  guardarDatos();
+}
+
+function editarHorario(index) {
+  const h = horarioClases[index];
+  if (!h) return;
+
+  editandoHorarioIndex = index;
+
+  const inputCurso = document.getElementById('horario-curso');
+  const selectDia = document.getElementById('horario-dia');
+  const inputInicio = document.getElementById('horario-inicio');
+  const inputFin = document.getElementById('horario-fin');
+  const inputFInicio = document.getElementById('horario-fecha-inicio');
+  const inputFFin = document.getElementById('horario-fecha-fin');
+  const inputAula = document.getElementById('horario-aula');
+  const inputColor = document.getElementById('horario-color');
+
+  if (inputCurso) inputCurso.value = h.curso;
+  if (selectDia) selectDia.value = h.diaIndex !== undefined ? h.diaIndex : "";
+  if (inputInicio) inputInicio.value = h.inicio;
+  if (inputFin) inputFin.value = h.fin;
+  if (inputFInicio) inputFInicio.value = h.fInicio || "";
+  if (inputFFin) inputFFin.value = h.fFin || "";
+  if (inputAula) inputAula.value = h.aula;
+  if (inputColor) inputColor.value = h.color;
+
+  document.querySelectorAll('#color-picker .color-option').forEach(el => {
+    if (el.style.backgroundColor === h.color) {
+      el.classList.add('selected');
+    } else {
+      el.classList.remove('selected');
+    }
+  });
+
+  const btnSubmit = document.querySelector('#form-horario button[type="submit"]');
+  if (btnSubmit) {
+    btnSubmit.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Cambios';
+  }
+
+  const form = document.getElementById('form-horario');
+  if (form) form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function eliminarHorario(index) {
+  horarioClases.splice(index, 1);
+  renderHorario();
+  reconstruirEventosCalendario();
+}
+
+/* ==========================================
+   FORMULARIOS Y OTROS MÓDULOS
+   ========================================== */
 function configurarEventosFormularios() {
   document.getElementById('btn-darkmode')?.addEventListener('click', () => document.body.classList.toggle('dark-mode'));
 
@@ -510,14 +744,40 @@ function configurarEventosFormularios() {
 
     if (!color) return alert("Selecciona un color.");
     const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-    horarioClases.push({ curso, dia: dias[dia], inicio, fin, aula, color });
+
+    const nuevaClase = {
+      curso,
+      diaIndex: dia,
+      dia: dias[dia],
+      inicio,
+      fin,
+      fInicio,
+      fFin,
+      aula,
+      color
+    };
+
+    if (editandoHorarioIndex !== null) {
+      horarioClases[editandoHorarioIndex] = nuevaClase;
+      editandoHorarioIndex = null;
+
+      const btnSubmit = document.querySelector('#form-horario button[type="submit"]');
+      if (btnSubmit) {
+        btnSubmit.innerText = "Guardar Clase";
+      }
+    } else {
+      horarioClases.push(nuevaClase);
+    }
+
     coloresUsados.add(color);
     
     renderHorario();
     renderColorPicker();
-    agregarClaseRecurrenteAlCalendario(curso, dia, inicio, fin, fInicio, fFin, aula, color);
-    if (calendarInstance) calendarInstance.gotoDate(fInicio);
+    reconstruirEventosCalendario();
+
+    if (calendarInstance && fInicio) calendarInstance.gotoDate(fInicio);
     e.target.reset();
+    if (colorEl) colorEl.value = '';
   });
 
   document.getElementById('form-tarea')?.addEventListener('submit', (e) => {
@@ -567,9 +827,14 @@ function renderTareas() {
       <button class="btn-delete-eval btn-anim" style="float:right;" onclick="eliminarTarea(${i})"><i class="fa-solid fa-xmark"></i></button>
     </li>
   `).join('');
+  guardarDatos();
+  reconstruirEventosCalendario(); // Se sincroniza automáticamente con el calendario
 }
 
-function eliminarTarea(index) { tareas.splice(index, 1); renderTareas(); }
+function eliminarTarea(index) { 
+  tareas.splice(index, 1); 
+  renderTareas(); 
+}
 
 function renderFinanzas() {
   const ul = document.getElementById('lista-finanzas');
@@ -590,6 +855,7 @@ function renderFinanzas() {
   }).join('');
 
   if (spanTotal) spanTotal.innerText = `S/ ${total.toFixed(2)}`;
+  guardarDatos();
 }
 
 function eliminarFinanza(index) { finanzas.splice(index, 1); renderFinanzas(); }
@@ -603,6 +869,7 @@ function renderRecursos() {
       <button class="btn-delete-eval btn-anim" style="float:right;" onclick="eliminarRecurso(${i})"><i class="fa-solid fa-xmark"></i></button>
     </li>
   `).join('');
+  guardarDatos();
 }
 
 function eliminarRecurso(index) { recursos.splice(index, 1); renderRecursos(); }
@@ -639,13 +906,14 @@ function renderTemasPlan() {
     const div = document.createElement('div');
     div.style.display = "flex"; div.style.alignItems = "center"; div.style.gap = "10px"; div.style.marginBottom = "8px";
     div.innerHTML = `
-      <input type="checkbox" ${tema.completado ? 'checked' : ''} style="width: auto;" onchange="temasPlan[${index}].completado = !temasPlan[${index}].completado; actualizarGraficoProgreso();">
-      <input type="text" value="${tema.nombre}" onchange="temasPlan[${index}].nombre = this.value; actualizarGraficoProgreso();" style="flex:1;">
+      <input type="checkbox" ${tema.completado ? 'checked' : ''} style="width: auto;" onchange="temasPlan[${index}].completado = !temasPlan[${index}].completado; actualizarGraficoProgreso(); guardarDatos();">
+      <input type="text" value="${tema.nombre}" onchange="temasPlan[${index}].nombre = this.value; actualizarGraficoProgreso(); guardarDatos();" style="flex:1;">
       <button class="btn-delete-eval btn-anim" onclick="temasPlan.splice(${index},1); renderTemasPlan();"><i class="fa-solid fa-xmark"></i></button>
     `;
     container.appendChild(div);
   });
   actualizarGraficoProgreso();
+  guardarDatos();
 }
 
 function agregarTemaPlan() { 
@@ -698,15 +966,4 @@ function renderColorPicker() {
     }
     container.appendChild(div);
   });
-}
-
-function renderHorario() {
-  const ul = document.getElementById('lista-horario');
-  if (!ul) return;
-  ul.innerHTML = horarioClases.map((h) => `
-    <li style="border-left: 5px solid ${h.color}; position: relative;">
-      <strong>${h.curso}</strong> - ${h.dia} (${h.inicio} a ${h.fin})<br>
-      <small>${h.aula}</small>
-    </li>
-  `).join('');
 }
