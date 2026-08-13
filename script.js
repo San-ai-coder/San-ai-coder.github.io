@@ -527,26 +527,32 @@ function actualizarCantidadCursos() {
 }
 
 /* ==========================================
-   TOOLTIP / CUADRO INFORMATIVO FLOTANTE
+   TOOLTIP / CUADRO INFORMATIVO FLOTANTE (ADAPTADO A MÓVILES)
    ========================================== */
 function crearTooltip() {
   if (!tooltipEl) {
     tooltipEl = document.createElement('div');
     tooltipEl.id = 'calendar-custom-tooltip';
     tooltipEl.style.position = 'fixed';
-    tooltipEl.style.zIndex = '99999';
+    tooltipEl.style.zIndex = '999999';
     tooltipEl.style.background = '#0f172a';
     tooltipEl.style.color = '#ffffff';
-    tooltipEl.style.padding = '8px 12px';
-    tooltipEl.style.borderRadius = '8px';
-    tooltipEl.style.fontSize = '0.82rem';
-    tooltipEl.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
-    tooltipEl.style.pointerEvents = 'none';
+    tooltipEl.style.padding = '12px 16px';
+    tooltipEl.style.borderRadius = '12px';
+    tooltipEl.style.fontSize = '0.85rem';
+    tooltipEl.style.boxShadow = '0 10px 25px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1)';
+    tooltipEl.style.pointerEvents = 'auto';
     tooltipEl.style.display = 'none';
-    tooltipEl.style.maxWidth = '250px';
     tooltipEl.style.lineHeight = '1.4';
-    tooltipEl.style.border = '1px solid #334155';
+    tooltipEl.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
     document.body.appendChild(tooltipEl);
+
+    // Cierra el cuadro si se pulsa fuera de la tarjeta o del evento
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.fc-event') && !e.target.closest('#calendar-custom-tooltip')) {
+        ocultarTooltip();
+      }
+    });
   }
 }
 
@@ -555,19 +561,46 @@ function mostrarTooltip(info) {
   const desc = info.event.extendedProps.descripcion || '';
   
   tooltipEl.innerHTML = `
-    <div style="font-weight: 700; color: #60a5fa; margin-bottom: 2px;">${info.event.title}</div>
-    <div style="color: #cbd5e1; font-size: 0.78rem;">${desc}</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+      <span style="font-weight: 700; color: #60a5fa; font-size: 0.92rem;">${info.event.title}</span>
+      <button onclick="ocultarTooltip()" style="background:none; border:none; color:#94a3b8; font-size:1rem; cursor:pointer; padding:0 0 0 8px;">✕</button>
+    </div>
+    <div style="color: #cbd5e1; font-size: 0.8rem; line-height: 1.4;">${desc}</div>
   `;
 
-  const rect = info.el.getBoundingClientRect();
-  tooltipEl.style.left = `${rect.left + (rect.width / 2) - 100}px`;
-  tooltipEl.style.top = `${rect.top - 55}px`;
+  const esMovil = window.innerWidth <= 640;
+
+  if (esMovil) {
+    // Estilo fijo inferior responsivo para pantalla táctil
+    tooltipEl.style.left = '50%';
+    tooltipEl.style.bottom = '20px';
+    tooltipEl.style.top = 'auto';
+    tooltipEl.style.transform = 'translateX(-50%)';
+    tooltipEl.style.width = '90%';
+    tooltipEl.style.maxWidth = '360px';
+  } else {
+    // Posicionamiento dinámico cerca del cursor/evento en PC
+    const rect = info.el.getBoundingClientRect();
+    tooltipEl.style.transform = 'none';
+    tooltipEl.style.width = 'auto';
+    tooltipEl.style.maxWidth = '260px';
+    tooltipEl.style.bottom = 'auto';
+    
+    let posX = rect.left + (rect.width / 2) - 130;
+    posX = Math.max(10, Math.min(window.innerWidth - 270, posX));
+    
+    tooltipEl.style.left = `${posX}px`;
+    tooltipEl.style.top = `${Math.max(10, rect.top - 75)}px`;
+  }
+
   tooltipEl.style.display = 'block';
+  tooltipEl.style.opacity = '1';
 }
 
 function ocultarTooltip() {
   if (tooltipEl) {
     tooltipEl.style.display = 'none';
+    tooltipEl.style.opacity = '0';
   }
 }
 
@@ -590,11 +623,23 @@ function inicializarCalendario24h() {
     eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
     headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,dayGridMonth' },
     buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana' },
+    
+    // Hover para escritorio
     eventMouseEnter: function(info) {
-      mostrarTooltip(info);
+      if (window.innerWidth > 640) {
+        mostrarTooltip(info);
+      }
     },
     eventMouseLeave: function() {
-      ocultarTooltip();
+      if (window.innerWidth > 640) {
+        ocultarTooltip();
+      }
+    },
+    
+    // Tap / Clic para Celulares
+    eventClick: function(info) {
+      info.jsEvent.stopPropagation();
+      mostrarTooltip(info);
     },
     events: []
   });
@@ -828,7 +873,7 @@ function renderTareas() {
     </li>
   `).join('');
   guardarDatos();
-  reconstruirEventosCalendario(); // Se sincroniza automáticamente con el calendario
+  reconstruirEventosCalendario();
 }
 
 function eliminarTarea(index) { 

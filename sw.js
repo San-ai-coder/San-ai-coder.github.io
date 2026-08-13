@@ -1,119 +1,73 @@
 /* ==========================================
-   SERVICE WORKER (sw.js) - PWA Y OFFLINE
+   SERVICE WORKER - PWA ACADÉMICA (DEFINITIVO)
    ========================================== */
 
-const CACHE_NAME = 'planner-app-v1';
+const NOMBRE_CACHE = 'app-academica-v1';
 
-// Recursos críticos a guardar en el caché inicial
-const ASSETS_TO_CACHE = [
+// Archivos y librerías clave guardadas localmente
+const ARCHIVOS_CACHE = [
   './',
   './index.html',
-  './styles.css',
+  './style.css',
   './script.js',
   './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  // Fuentes externas y dependencias CDN (si usas FullCalendar o Google Fonts)
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@700;800;900&display=swap',
-  'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css'
+  './hinata-shoyo.gif',
+  './Get Lucky (feat. Pharrell Williams and Nile Rodgers).mp3',
+  'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.min.css',
+  'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js',
+  'https://cdn.jsdelivr.net/npm/chart.js',
+  'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
-/* ------------------------------------------
-   1. INSTALACIÓN
-   ------------------------------------------ */
+// 1. Instalación e inoculación de caché
 self.addEventListener('install', (event) => {
-  // Fuerza al Service Worker a activarse inmediatamente sin esperar a que el usuario recargue
-  self.skipWaiting();
-
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Guardando recursos críticos en caché...');
-      // Usamos addAll de forma segura (ignorando errores de assets externos opcionales si fallan)
-      return Promise.allSettled(
-        ASSETS_TO_CACHE.map((url) => cache.add(url))
-      );
-    })
+    caches.open(NOMBRE_CACHE).then((cache) => {
+      console.log('[Service Worker] Almacenando recursos estáticos...');
+      return cache.addAll(ARCHIVOS_CACHE);
+    }).then(() => self.skipWaiting())
   );
 });
 
-/* ------------------------------------------
-   2. ACTIVACIÓN Y LIMPIEZA
-   ------------------------------------------ */
+// 2. Activación y limpieza de caché obsoleta
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            console.log('[SW] Eliminando caché antiguo:', cache);
-            return caches.delete(cache);
+        keys.map((key) => {
+          if (key !== NOMBRE_CACHE) {
+            console.log('[Service Worker] Removiendo caché antigua:', key);
+            return caches.delete(key);
           }
         })
       );
-    }).then(() => self.clients.claim()) // Toma control de la app inmediatamente
+    }).then(() => self.clients.claim())
   );
 });
 
-/* ------------------------------------------
-   3. ESTRATEGIA DE INTERCEPTACIÓN (FETCH)
-   ------------------------------------------ */
+// 3. Estrategia Network First con respaldo Offline
 self.addEventListener('fetch', (event) => {
-  // Ignorar peticiones no GET o de extensiones
-  if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) {
-    return;
-  }
+  if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      // Si el recurso está en el caché, lo entrega rápido
-      if (cachedResponse) {
-        // Opcional: Actualizar el caché en segundo plano (Stale-While-Revalidate)
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-            }
-          })
-          .catch(() => {/* Red no disponible, continua usando el caché */});
-
-        return cachedResponse;
-      }
-
-      // Si no está en caché, lo busca en la red
-      return fetch(event.request)
-        .then((networkResponse) => {
-          // Si la respuesta es válida, guardamos una copia en el caché dinámico
-          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
+    fetch(event.request)
+      .then((respuestaRed) => {
+        const clonRespuesta = respuestaRed.clone();
+        caches.open(NOMBRE_CACHE).then((cache) => {
+          cache.put(event.request, clonRespuesta);
+        });
+        return respuestaRed;
+      })
+      .catch(() => {
+        return caches.match(event.request).then((respuestaCache) => {
+          if (respuestaCache) {
+            return respuestaCache;
           }
-          return networkResponse;
-        })
-        .catch(() => {
-          // Si falla la red y es una página navegable, sirve el index.html
-          if (event.request.mode === 'navigate') {
+          if (event.request.headers.get('accept')?.includes('text/html')) {
             return caches.match('./index.html');
           }
         });
-    })
-  );
-});
-
-/* ------------------------------------------
-   4. MANEJO DE NOTIFICACIONES PUSH (OPCIONAL)
-   ------------------------------------------ */
-self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.text() : '¡Tiempo terminado!';
-  const options = {
-    body: data,
-    icon: './icons/icon-192.png',
-    badge: './icons/icon-192.png',
-    vibrate: [200, 100, 200]
-  };
-
-  event.waitUntil(
-    self.registration.showNotification('Pomodoro Planner', options)
+      })
   );
 });
